@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { sql } from "../utils/db.js";
 
 interface User {
-  userId: number;
+  user_id: number;
   email: string;
   name: string;
   phone_number: string;
