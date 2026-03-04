@@ -213,3 +213,70 @@ export const deleteSkillFromUser = TryCatch(
     });
   },
 );
+
+export const applyForJob = TryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+
+  if (!user) throw new ErrorHandler(401, "Authentication required");
+  if (user.role !== "jobseeker")
+    throw new ErrorHandler(403, "Forbidden to do this request");
+  const applicant_id = user.user_id;
+
+  const resume = user.resume;
+  if (!resume)
+    throw new ErrorHandler(
+      400,
+      "Resume is required in the profile to apply for a job",
+    );
+
+  const {job_id} = req.body;
+  if (!job_id)
+    throw new ErrorHandler(
+      400,
+      "Job id is required in the profile to apply for a job",
+    );
+
+  const [job] = await sql`SELECT is_active FROM jobs WHERE job_id = ${job_id}`;
+  if (!job) throw new ErrorHandler(404, "No jobs found with this id");
+  if (!job.is_active) throw new ErrorHandler(400, "Jobs is not active");
+
+  const now = Date.now();
+  const subTime = req.user?.subscription
+    ? new Date(req.user?.subscription).getTime()
+    : 0;
+
+  const isSubscribed = subTime > now;
+
+  let newApplication;
+  try {
+    [newApplication] =
+      await sql`INSERT INTO applications(job_id, applicant_id, applicant_email, resume, subscribed)
+    VALUES (${job_id}, ${applicant_id}, ${user?.email}, ${resume}, ${isSubscribed})`;
+  } catch (error: any) {
+    if (error.code === "23505") {
+      throw new ErrorHandler(409, "You have already applied for this job");
+    }
+    throw error;
+  }
+
+  res.json({
+    message: "Applied for the job successfully",
+    application: newApplication,
+  });
+});
+
+export const getAllAplications = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const applications = await sql`
+      SELECT a.*, 
+             j.title AS job_title, 
+             j.salary AS job_salary, 
+             j.location AS job_location
+      FROM applications a
+      JOIN jobs j 
+      ON a.job_id = j.job_id
+      WHERE a.applicant_id = ${req.user?.user_id}
+    `;
+    res.json(applications);
+  },
+);
