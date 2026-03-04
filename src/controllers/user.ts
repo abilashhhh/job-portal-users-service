@@ -229,7 +229,7 @@ export const applyForJob = TryCatch(async (req: AuthenticatedRequest, res) => {
       "Resume is required in the profile to apply for a job",
     );
 
-  const {job_id} = req.body;
+  const { job_id } = req.body;
   if (!job_id)
     throw new ErrorHandler(
       400,
@@ -278,5 +278,25 @@ export const getAllAplications = TryCatch(
       WHERE a.applicant_id = ${req.user?.user_id}
     `;
     res.json(applications);
+  },
+);
+
+export const getAllAplicationsForJobId = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    if (!user) throw new ErrorHandler(401, "Authentication required");
+    if (user.role !== "recruiter")
+      throw new ErrorHandler(403, "Forbidden to do this request");
+    const { job_id } = req.params;
+    const [job] =
+      await sql`SELECT posted_by_recruiter_id FROM jobs WHERE job_id = ${job_id}`;
+    if (!job) throw new ErrorHandler(404, "Job not found");
+    if (job.posted_by_recruiter_id !== user.user_id) {
+      throw new ErrorHandler(403, "Forbidden, You are not allowed");
+    }
+
+    const applications =
+      await sql`SELECT * FROM applications WHERE job_id = ${job_id}
+      ORDER BY subscribed DESC,applied_at ASC`;
   },
 );

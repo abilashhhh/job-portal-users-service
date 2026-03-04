@@ -5,6 +5,7 @@ import {
   applyForJob,
   deleteSkillFromUser,
   getAllAplications,
+  getAllAplicationsForJobId,
   getUserProfile,
   myProfile,
   updateUserProfile,
@@ -23,5 +24,6 @@ router.post("/skill/add", isAuth, addSkillToUser);
 router.delete("/skill/delete", isAuth, deleteSkillFromUser);
 router.post("/applyJob", isAuth, applyForJob);
 router.get("/getAllApplications", isAuth, getAllAplications);
+router.get("/getAllApplications/:job_id", isAuth, getAllAplicationsForJobId);
 
 export default router;
